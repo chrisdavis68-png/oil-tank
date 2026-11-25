@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Oil Tank</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Oil Tank">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1d4a33">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: practical, calm, a farm-gate tool you trust at a glance.
+   IDEA: the dipstick and the tank's own sight gauge — the page reads like the tank.
+   PICTURE: a cutaway of the green Titan tank with the oil level, dipstick scale and reorder line.
+   COLOUR and TYPE: Titan bottle green, kerosene straw, signal red for "order now"; Barlow Condensed figures, Inter text.
+   LAYOUT: tank picture beside big readouts, then the dip entry, then deliveries, history, settings. Stacks on phones. */
+:root{color-scheme:light dark;--bg:light-dark(#f4f6f3,#0e1611);--ink:light-dark(#14211a,#e6eee8);--mute:light-dark(#5a6a60,#9fb2a6);--card:light-dark(#ffffff,#16231b);--line:light-dark(#d9e1db,#2a3a30);--green:#1d4a33;--green2:light-dark(#2f6b4b,#4f9a72);--oil:#f0d98a;--oil2:#c9a43a;--red:#d4402a;--amber:#d99a00;--ok:light-dark(#2f6b4b,#6cc093)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Inter,system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(18px,4vw,40px) max(4vw,14px);max-width:1100px;margin:0 auto}
+header.top{background:var(--green);color:#eaf3ed;padding-top:env(safe-area-inset-top)}
+header.top .band{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;padding-block:16px;padding-left:max(4vw,14px,env(safe-area-inset-left));padding-right:max(4vw,14px,env(safe-area-inset-right))}
+main{padding-bottom:env(safe-area-inset-bottom)}
+.banner.tip{background:var(--card);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--green2)}
+.banner.warn{background:var(--card);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--amber)}
+h1{font:600 28px/1.05 "Barlow Condensed",sans-serif;margin:0;letter-spacing:.01em}
+h2{font:600 24px/1.1 "Barlow Condensed",sans-serif;margin:0 0 12px}
+.sub{font-size:14px;opacity:.85}
+.hero{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:clamp(16px,3vw,36px);align-items:center}
+.tank svg{width:100%;height:auto;display:block}
+.big{font:600 clamp(48px,9vw,76px)/1 "Barlow Condensed",sans-serif}
+.big small{font-size:.45em;color:var(--mute);font-weight:500}
+.meta{color:var(--mute);font-size:14px;margin:4px 0 14px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.tile .k{font-size:13px;color:var(--mute)}
+.tile .v{font:600 28px/1.1 "Barlow Condensed",sans-serif;white-space:nowrap}
+.tile .n{font-size:13px;color:var(--mute)}
+.tile.red{border-color:var(--red);box-shadow:inset 4px 0 0 var(--red)}.tile.red .v{color:var(--red)}
+.tile.amber{border-color:var(--amber);box-shadow:inset 4px 0 0 var(--amber)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mute);flex:1 1 140px}
+input,textarea{font:16px Inter,system-ui,sans-serif;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);min-height:46px;width:100%}
+input.cm{font:600 28px "Barlow Condensed",sans-serif;padding:6px 12px}
+textarea{min-height:200px;font-family:ui-monospace,Menlo,monospace;font-size:14px}
+input:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--green2);outline-offset:2px}
+button{font:600 16px Inter,system-ui,sans-serif;min-height:46px;padding:0 18px;border-radius:10px;border:0;background:var(--green);color:#fff;cursor:pointer}
+button.ghost{background:transparent;color:var(--green2);border:1px solid var(--line)}
+button.small{min-height:36px;padding:0 12px;font-size:14px}
+button:disabled{opacity:.5}
+.hint{font-size:13px;color:var(--mute);margin:8px 0 0}
+.status{min-height:22px;font-size:14px;margin-top:8px}
+.status.err{color:var(--red)}
+.fig{position:relative;height:260px}.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;gap:10px;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.list .what{flex:1 1 220px}.list .when{font-size:13px;color:var(--mute)}
+.list .acts{display:flex;gap:6px}
+.tag{font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--oil);color:#3d2f00;margin-right:6px}
+.calib{border-left:4px solid var(--amber)}
+details summary{cursor:pointer;font:600 22px "Barlow Condensed",sans-serif;min-height:44px;display:flex;align-items:center}
+.banner{background:var(--red);color:#fff;padding:10px 14px;border-radius:10px;margin-bottom:12px;display:none}
+@media(max-width:600px){.hero{grid-template-columns:1fr}.tank{max-width:260px;margin:0 auto}}
+@media(prefers-reduced-motion:no-preference){#oilRect,#oilTop{transition:y .6s ease,height .6s ease}}
+</style>
+</head>
+<body>
+<header class="top"><div class="band"><h1>Oil tank tracker</h1><span class="sub">Titan ES2500 · 2,500 L bunded</span></div></header>
+
+<main>
+<section class="band">
+  <div class="banner" id="banner"></div>
+  <div class="hero">
+    <div class="tank" id="tank" aria-label="Tank level picture"></div>
+    <div>
+      <div class="big" id="bigL">— <small>litres</small></div>
+      <div class="meta" id="bigMeta">Connecting…</div>
+      <div class="tiles" id="tiles"></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" style="padding-top:0">
+  <div class="panel" id="dipPanel">
+    <h2 id="dipTitle">Log a dip</h2>
+    <div class="row">
+      <label>Broom handle reading (cm)<input id="dipCm" class="cm" type="number" inputmode="decimal" step="0.5" min="0" max="140" placeholder="e.g. 58"></label>
+      <label>When<input id="dipWhen" type="datetime-local"></label>
+    </div>
+    <p class="hint" id="dipPreview">Enter the wet line on the handle, measured from the bottom.</p>
+    <div class="row" style="margin-top:10px"><button id="dipSave">Save dip</button><button class="ghost" id="dipCancel" hidden>Cancel edit</button></div>
+    <div class="status" id="dipStatus"></div>
+  </div>
+
+  <div class="panel calib" id="calib" hidden></div>
+
+  <div class="panel">
+    <h2 id="delTitle">Log a delivery</h2>
+    <div class="row">
+      <label>Litres delivered<input id="delL" type="number" inputmode="numeric" min="0" step="1" placeholder="1000"></label>
+      <label>Date<input id="delWhen" type="datetime-local"></label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label>Price, pence per litre inc. VAT<input id="delP" type="number" inputmode="decimal" step="0.01" min="0" placeholder="e.g. 98.5"></label>
+      <label>Or total paid (£)<input id="delTot" type="number" inputmode="decimal" step="0.01" min="0" placeholder="optional"></label>
+      <label>Supplier<input id="delSup" type="text" value="Watson Fuels"></label>
+    </div>
+    <p class="hint">Dip just before and just after each delivery: the app uses the pair to correct the dip chart.</p>
+    <div class="row" style="margin-top:10px"><button id="delSave">Save delivery</button><button class="ghost" id="delCancel" hidden>Cancel edit</button></div>
+    <div class="status" id="delStatus"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Level over time</h2>
+    <div class="fig"><svg id="hist" role="img" aria-label="Litres in the tank over time"></svg></div>
+    <p class="hint">Solid line: dips. Dashed: projection at current usage. Red dashed: reorder level. Green marks: deliveries.</p>
+  </div>
+
+  <div class="panel">
+    <h2>History</h2>
+    <ul class="list" id="list"></ul>
+    <div class="status" id="listStatus"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Backup</h2>
+    <p class="hint" style="margin-top:0">Your readings are stored on this device only. Save a backup to Files now and then, and after any big batch of entries.</p>
+    <p class="hint" id="lastBackup"></p>
+    <div class="row" style="margin-top:10px">
+      <button id="backup">Save backup</button>
+      <button class="ghost" id="copyCsv">Copy as CSV</button>
+      <label class="ghost" style="flex:0 0 auto;min-height:46px;justify-content:center;padding:0 18px;border:1px solid var(--line);border-radius:10px;color:var(--green2);font-weight:600;font-size:16px;cursor:pointer">Restore from backup<input id="restore" type="file" accept=".json,application/json" hidden></label>
+    </div>
+    <div class="status" id="bkStatus"></div>
+  </div>
+
+  <div class="panel">
+    <details>
+      <summary>Settings and dip chart</summary>
+      <div class="row" style="margin-top:8px">
+        <label>Unusable oil below outlet (L)<input id="s_unusable" type="number" inputmode="numeric"></label>
+        <label>Supplier notice (days)<input id="s_lead" type="number" inputmode="numeric"></label>
+        <label>Safety buffer (days)<input id="s_buffer" type="number" inputmode="numeric"></label>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <label>Minimum order (L)<input id="s_min" type="number" inputmode="numeric"></label>
+        <label>Fill up to (L)<input id="s_max" type="number" inputmode="numeric"></label>
+        <label>Assumed usage until measured (L/day)<input id="s_rate" type="number" inputmode="decimal" step="0.5"></label>
+      </div>
+      <label style="margin-top:10px">Dip chart: one "cm, litres" pair per line<textarea id="s_chart" spellcheck="false"></textarea></label>
+      <p class="hint">Approximate chart for a Titan ES2500 (±10%). It gets corrected from your own before-and-after delivery dips.</p>
+      <div class="row" style="margin-top:10px"><button id="setSave">Save settings</button><button class="ghost" id="setReset">Restore default chart</button></div>
+      <div class="status" id="setStatus"></div>
+    </details>
+  </div>
+</section>
+</main>
+
+<script>
+{
+/*CORE*/
+const DEF={chart:[[0,0],[10,160],[20,340],[30,540],[40,760],[50,980],[60,1220],[70,1450],[80,1690],[90,1910],[100,2120],[110,2320],[120,2490],[128,2620]],unusable:100,leadDays:10,bufferDays:5,minOrder:500,maxFill:2500,assumedRate:10};
+const DAY=864e5,MIN_SPAN=4;
+function interp(x,pts,a,b){if(x<=pts[0][a])return pts[0][b];for(let i=1;i<pts.length;i++){const p=pts[i-1],q=pts[i];if(x<=q[a])return p[b]+(q[b]-p[b])*(x-p[a])/(q[a]-p[a]);}return pts[pts.length-1][b];}
+const cmToL=(cm,ch)=>interp(cm,ch,0,1),lToCm=(l,ch)=>interp(l,ch,1,0);
+/* Usage only from gaps between dips with no delivery inside, so chart error at a fill-up can't distort it. */
+function rateOver(dips,dels,ch,startIdx){let c=0,days=0;for(let i=startIdx;i<dips.length-1;i++){const a=dips[i],b=dips[i+1];if(dels.some(d=>d.t>a.t&&d.t<=b.t))continue;c+=cmToL(a.cm,ch)-cmToL(b.cm,ch);days+=(b.t-a.t)/DAY;}if(days<MIN_SPAN)return null;return Math.max(0,c/days);}
+function analyse(dipsIn,delsIn,s,now){
+  const ch=s.chart,dips=[...dipsIn].sort((a,b)=>a.t-b.t),dels=[...delsIn].sort((a,b)=>a.t-b.t),r={};
+  if(!dips.length)return null;
+  const last=dips[dips.length-1];r.latest=last;r.litresLatest=cmToL(last.cm,ch);
+  let i14=0;for(let i=0;i<dips.length;i++)if(dips[i].t<=last.t-14*DAY)i14=i;
+  r.rate14=rateOver(dips,dels,ch,i14);r.rateAll=rateOver(dips,dels,ch,0);
+  if(r.rate14!=null){r.rate=r.rate14;r.rateSrc="last 14 days";}else if(r.rateAll!=null){r.rate=r.rateAll;r.rateSrc="since first dip";}else{r.rate=s.assumedRate;r.rateSrc="assumed until you have "+MIN_SPAN+"+ days of dips";r.assumed=true;}
+  const after=dels.filter(d=>d.t>last.t).reduce((a,d)=>a+d.litres,0);
+  r.daysSince=Math.max(0,(now-last.t)/DAY);
+  r.estNow=Math.max(0,r.litresLatest+after-r.rate*r.daysSince);r.estCm=lToCm(r.estNow,ch);
+  r.usableNow=Math.max(0,r.estNow-s.unusable);
+  r.reorderL=s.unusable+(s.leadDays+s.bufferDays)*r.rate;r.reorderCm=lToCm(r.reorderL,ch);
+  if(r.rate>0){r.daysToReorder=(r.estNow-r.reorderL)/r.rate;r.reorderDate=now+r.daysToReorder*DAY;r.daysLeft=r.usableNow/r.rate;r.runOut=now+r.daysLeft*DAY;}
+  const atDel=s.unusable+s.bufferDays*r.rate;r.orderSize=Math.max(s.minOrder,Math.floor((s.maxFill-atDel)/100)*100);
+  const priced=dels.filter(d=>d.ppl>0);r.price=priced.length?priced[priced.length-1].ppl:null;
+  if(r.price!=null){r.costDay=r.rate*r.price/100;r.value=r.estNow*r.price/100;}
+  r.status=r.daysToReorder==null?"ok":r.daysToReorder<=0?"red":r.daysToReorder<=7?"amber":"ok";
+  for(let k=dels.length-1;k>=0&&!r.calib;k--){const d=dels[k];const before=[...dips].reverse().find(x=>x.t<=d.t&&d.t-x.t<=3*DAY);const aft=dips.find(x=>x.t>d.t&&x.t-d.t<=3*DAY);if(before&&aft){const delta=cmToL(aft.cm,ch)-cmToL(before.cm,ch);if(delta>50)r.calib={del:d,before,after:aft,delta,factor:d.litres/delta};}}
+  return r;
+}
+/*ENDCORE*/
+const $=s=>document.querySelector(s);
+const esc=v=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nf=n=>Math.round(n).toLocaleString("en-GB"),gbp=n=>"£"+n.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fD=t=>new Date(t).toLocaleDateString("en-GB"),fDT=t=>new Date(t).toLocaleString("en-GB",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+const toInput=ms=>{const d=new Date(ms),p=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`};
+const st={dips:[],dels:[],set:{...DEF},db:null,got:{d:0,l:0},editing:null,armed:null,an:null};
+const say=(id,msg,err)=>{const e=$(id);e.textContent=msg;e.className="status"+(err?" err":"");};
+function settings(){return st.set;}
+
+function tankSVG(r,s){
+  const top=58,bot=268,H=bot-top,maxCm=s.chart[s.chart.length-1][0];const y=cm=>bot-Math.min(cm,maxCm)/maxCm*H;
+  const cm=r?r.estCm:0,oy=y(cm);let ticks="";
+  for(let c=0;c<=maxCm;c+=10){const ty=y(c);ticks+=`<line x1="214" x2="${c%20?222:226}" y1="${ty}" y2="${ty}" stroke="currentColor" stroke-width="1"/>`+(c%20?"":`<text x="230" y="${ty+4}" font-size="11" fill="currentColor">${c}</text>`);}
+  const ry=r?y(r.reorderCm):null;
+  return `<svg viewBox="0 0 262 300" style="color:var(--mute)"><defs><clipPath id="body"><rect x="22" y="${top}" width="174" height="${H}" rx="22"/></clipPath>
+  <linearGradient id="tg" x1="0" x2="1"><stop offset="0" stop-color="#2a5f43"/><stop offset=".55" stop-color="#1d4a33"/><stop offset="1" stop-color="#143524"/></linearGradient></defs>
+  <ellipse cx="109" cy="${bot+14}" rx="100" ry="8" fill="currentColor" opacity=".18"/>
+  <rect x="16" y="${top-10}" width="186" height="${H+20}" rx="28" fill="url(#tg)"/>
+  <rect x="78" y="${top-24}" width="62" height="16" rx="6" fill="#2a5f43"/>
+  <g clip-path="url(#body)"><rect x="22" y="${top}" width="174" height="${H}" fill="#0f2a1c"/>
+  <rect id="oilRect" x="22" y="${oy}" width="174" height="${bot-oy}" fill="var(--oil)"/><rect id="oilTop" x="22" y="${oy}" width="174" height="3" fill="var(--oil2)"/>
+  ${ry!=null?`<line x1="22" x2="196" y1="${ry}" y2="${ry}" stroke="var(--red)" stroke-width="2" stroke-dasharray="6 4"/><text x="30" y="${ry-6}" font-size="12" font-weight="600" fill="var(--red)">Reorder ${Math.round(r.reorderCm)} cm</text>`:""}
+  </g>
+  <line x1="214" x2="214" y1="${top}" y2="${bot}" stroke="currentColor"/>${ticks}
+  ${r?`<path d="M206 ${oy} l-9 -6 v12z" fill="var(--oil2)"/>`:""}
+  </svg>`;
+}
+
+function render(){
+  const s=settings(),r=analyse(st.dips,st.dels,s,Date.now());st.an=r;
+  $("#tank").innerHTML=tankSVG(r,s);
+  if(!r){$("#bigL").innerHTML=`— <small>litres</small>`;$("#bigMeta").textContent=st.got.d?"No dips yet. Log your first reading below.":"Connecting…";$("#tiles").innerHTML="";}
+  else{
+    $("#bigL").innerHTML=`${nf(r.estNow)} <small>litres</small>`;
+    const pct=Math.round(r.estNow/s.maxFill*100);
+    $("#bigMeta").textContent=`${pct}% of ${nf(s.maxFill)} L · ${r.daysSince>=1?"estimated today, from ":"from "}${r.latest.cm} cm dip on ${fD(r.latest.t)}`+(r.daysSince>=1?` (${nf(r.litresLatest)} L then)`:"");
+    const t=[];
+    if(r.daysToReorder!=null){const dd=Math.round(r.daysToReorder);t.push({cls:r.status,k:"Reorder by",v:r.daysToReorder<=0?"Order now":fD(r.reorderDate),n:r.daysToReorder<=0?`Below reorder level (${Math.round(r.reorderCm)} cm)`:`in ${dd} day${dd==1?"":"s"} · when dip reaches ${Math.round(r.reorderCm)} cm`});}
+    if(r.runOut)t.push({k:"Runs out around",v:fD(r.runOut),n:`${nf(r.daysLeft)} days of usable oil`});
+    t.push({k:"Usage",v:`${r.rate.toFixed(1)} L/day`,n:r.rateSrc});
+    t.push({k:"Suggested order",v:`${nf(r.orderSize)} L`,n:`to fill to about ${nf(s.maxFill)} L`});
+    if(r.price!=null)t.push({k:"Running cost",v:`${gbp(r.costDay)}/day`,n:`${gbp(r.costDay*7)}/week · oil in tank worth ${gbp(r.value)}`});
+    else t.push({k:"Running cost",v:"Add a price",n:"Edit your delivery to add pence per litre"});
+    $("#tiles").innerHTML=t.map(x=>`<div class="tile ${x.cls||""}"><div class="k">${esc(x.k)}</div><div class="v">${esc(x.v)}</div><div class="n">${esc(x.n)}</div></div>`).join("");
+  }
+  const c=r&&r.calib,cp=$("#calib");
+  if(c&&Math.abs(c.factor-1)>0.02){cp.hidden=false;const pc=Math.round(Math.abs(c.factor-1)*100);
+    cp.innerHTML=`<h2>Chart check</h2><p>Your dips around the ${esc(fD(c.del.t))} delivery show a rise of <b>${nf(c.delta)} L</b> on the chart, but the ticket says <b>${nf(c.del.litres)} L</b>. The chart reads about ${pc}% ${c.factor>1?"low":"high"}.</p><button id="calApply">Correct the chart by ${pc}%</button>`;}
+  else cp.hidden=true;
+  renderList();drawChart();previewDip();
+}
+
+function renderList(){
+  const ev=[...st.dips.map(d=>({...d,kind:"dip"})),...st.dels.map(d=>({...d,kind:"del"}))].sort((a,b)=>b.t-a.t);
+  if(!ev.length){$("#list").innerHTML=`<li class="when">Nothing logged yet.</li>`;return;}
+  const ch=settings().chart;
+  $("#list").innerHTML=ev.map(e=>{const del=st.armed===e.kind+e.id;
+    const what=e.kind=="dip"?`<span class="tag" style="background:var(--line);color:var(--ink)">Dip</span>${esc(e.cm)} cm ≈ ${nf(cmToL(e.cm,ch))} L`:`<span class="tag">Delivery</span>${nf(e.litres)} L`+(e.ppl>0?` · ${esc(e.ppl.toFixed(2))}p/L · ${gbp(e.litres*e.ppl/100)}`:" · price not added")+(e.supplier?` · ${esc(e.supplier)}`:"");
+    return `<li><div class="what">${what}<div class="when">${esc(fDT(e.t))}</div></div><div class="acts"><button class="ghost small" data-a="edit" data-k="${e.kind}" data-i="${esc(e.id)}">Edit</button><button class="${del?"":"ghost "}small" ${del?'style="background:var(--red)"':""} data-a="del" data-k="${e.kind}" data-i="${esc(e.id)}">${del?"Confirm":"Delete"}</button></div></li>`;}).join("");
+}
+
+function drawChart(){
+  const sv=$("#hist"),W=sv.clientWidth,H=sv.clientHeight;if(!W||!H)return;
+  const s=settings(),r=st.an,ch=s.chart,dips=[...st.dips].sort((a,b)=>a.t-b.t);
+  if(!dips.length){sv.innerHTML=`<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="var(--mute)" font-size="14">Your dips will appear here</text>`;return;}
+  const L=46,R=14,T=12,B=28,pts=dips.map(d=>({t:d.t,l:cmToL(d.cm,ch)}));
+  let x0=pts[0].t,x1=Math.max(Date.now(),pts[pts.length-1].t);
+  const proj=r&&r.rate>0?Math.min(r.runOut||x1,Date.now()+120*DAY):null;if(proj)x1=Math.max(x1,proj);if(x1-x0<7*DAY)x1=x0+7*DAY;
+  const ymax=Math.max(s.maxFill,...pts.map(p=>p.l));
+  const X=t=>L+(t-x0)/(x1-x0)*(W-L-R),Y=l=>T+(1-l/ymax)*(H-T-B);
+  let g="";for(let l=0;l<=ymax;l+=500)g+=`<line x1="${L}" x2="${W-R}" y1="${Y(l)}" y2="${Y(l)}" stroke="var(--line)"/><text x="${L-6}" y="${Y(l)+4}" text-anchor="end" font-size="11" fill="var(--mute)">${W<520&&l%1000?"":nf(l)}</text>`;
+  const nT=W<520?3:6;for(let i=0;i<=nT;i++){const t=x0+(x1-x0)*i/nT;const d=new Date(t);g+=`<text x="${X(t)}" y="${H-8}" text-anchor="${i==0?"start":i==nT?"end":"middle"}" font-size="11" fill="var(--mute)">${d.getDate()}/${d.getMonth()+1}</text>`;}
+  st.dels.forEach(d=>{if(d.t>=x0-DAY&&d.t<=x1)g+=`<line x1="${X(d.t)}" x2="${X(d.t)}" y1="${T}" y2="${H-B}" stroke="var(--green2)" stroke-width="2" opacity=".6"/>`;});
+  if(r)g+=`<line x1="${L}" x2="${W-R}" y1="${Y(r.reorderL)}" y2="${Y(r.reorderL)}" stroke="var(--red)" stroke-dasharray="6 4"/>`;
+  g+=`<polyline fill="none" stroke="var(--green2)" stroke-width="2.5" points="${pts.map(p=>X(p.t)+","+Y(p.l)).join(" ")}"/>`;
+  g+=pts.map(p=>`<circle cx="${X(p.t)}" cy="${Y(p.l)}" r="3.5" fill="var(--green2)"/>`).join("");
+  if(proj&&r){const lt=pts[pts.length-1];g+=`<line x1="${X(lt.t)}" y1="${Y(lt.l)}" x2="${X(proj)}" y2="${Y(Math.max(0,r.estNow-r.rate*(proj-Date.now())/DAY))}" stroke="var(--green2)" stroke-dasharray="4 4" stroke-width="2"/>`;}
+  sv.innerHTML=g;
+}
+const ro=new ResizeObserver(()=>drawChart());ro.observe($("#hist"));
+
+function previewDip(){const v=parseFloat($("#dipCm").value);$("#dipPreview").textContent=isFinite(v)?`${v} cm ≈ ${nf(cmToL(v,settings().chart))} litres`:"Enter the wet line on the handle, measured from the bottom.";}
+function fillSettings(){const s=settings();$("#s_unusable").value=s.unusable;$("#s_lead").value=s.leadDays;$("#s_buffer").value=s.bufferDays;$("#s_min").value=s.minOrder;$("#s_max").value=s.maxFill;$("#s_rate").value=s.assumedRate;$("#s_chart").value=s.chart.map(p=>p.join(", ")).join("\n");}
+function resetForms(){st.editing=null;$("#dipCm").value="";$("#dipWhen").value=toInput(Date.now());$("#dipTitle").textContent="Log a dip";$("#dipSave").textContent="Save dip";$("#dipCancel").hidden=true;
+  $("#delL").value="";$("#delP").value="";$("#delTot").value="";$("#delSup").value=lastSupplier();$("#delWhen").value=toInput(Date.now());$("#delTitle").textContent="Log a delivery";$("#delSave").textContent="Save delivery";$("#delCancel").hidden=true;previewDip();}
+
+/* On-device storage, shaped like the small store API the rest of the app calls. */
+const KEY="oiltank.v1",DAYMS=864e5;
+const SEED={dips:[{id:"p-2026-11-25",cm:64,t:1795618800000}],dels:[{id:"d-2026-11-25",litres:1000,t:1795611600000,ppl:119.4,supplier:"Watson Fuels"}],set:{...DEF,assumedRate:13},lastBackup:null};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+function loadStore(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&Array.isArray(x.dips)&&Array.isArray(x.dels))return x;}catch(e){}return null;}
+let store=loadStore();const firstRun=!store;if(!store)store=JSON.parse(JSON.stringify(SEED));
+function persist(){localStorage.setItem(KEY,JSON.stringify(store));}
+function sync(){st.dips=store.dips.slice();st.dels=store.dels.slice();st.set={...DEF,...store.set};st.got.d=1;}
+function commit(){persist();sync();render();}
+function lastSupplier(){const d=[...(store.dels||[])].sort((a,b)=>b.t-a.t).find(x=>x.supplier);return d?d.supplier:"Watson Fuels";}
+const local={
+  collection(name){const k=name=="dips"?"dips":"dels";return{
+    add:async d=>{store[k].push({id:uid(),...d});commit();},
+    doc:id=>({set:async d=>{const a=store[k],i=a.findIndex(x=>x.id==id),v={id,...d};if(i<0)a.push(v);else a[i]=v;commit();},
+             delete:async()=>{store[k]=store[k].filter(x=>x.id!=id);commit();}})};},
+  doc(){return{set:async d=>{store.set=d;commit();}};}
+};
+st.db=local;
+async function write(fn,statusId,okMsg){try{await fn(st.db);say(statusId,okMsg);return true;}catch(e){say(statusId,"Couldn't save on this device. If you're in a private browsing tab, switch to a normal one.",true);return false;}}
+
+$("#dipCm").addEventListener("input",previewDip);
+$("#dipSave").addEventListener("click",async e=>{const cm=parseFloat($("#dipCm").value),t=new Date($("#dipWhen").value).getTime();
+  if(!isFinite(cm)||cm<0||cm>140){say("#dipStatus","Enter a reading between 0 and 140 cm.",true);return;}if(!isFinite(t)){say("#dipStatus","Choose a date and time.",true);return;}
+  e.target.disabled=true;const id=st.editing&&st.editing.k=="dip"?st.editing.i:null;
+  const ok=await write(db=>id?db.collection("dips").doc(id).set({cm,t}):db.collection("dips").add({cm,t}),"#dipStatus",`Saved: ${cm} cm ≈ ${nf(cmToL(cm,settings().chart))} L.`);
+  e.target.disabled=false;if(ok)resetForms();});
+$("#delSave").addEventListener("click",async e=>{const litres=parseFloat($("#delL").value),t=new Date($("#delWhen").value).getTime();let ppl=parseFloat($("#delP").value);const tot=parseFloat($("#delTot").value);
+  if(!isFinite(litres)||litres<=0){say("#delStatus","Enter the litres delivered.",true);return;}if(!isFinite(t)){say("#delStatus","Choose a date.",true);return;}
+  if(!isFinite(ppl)&&isFinite(tot)&&tot>0)ppl=Math.round(tot/litres*10000)/100;
+  const doc={litres,t,ppl:isFinite(ppl)&&ppl>0?ppl:null,supplier:$("#delSup").value.trim().slice(0,60)};
+  e.target.disabled=true;const id=st.editing&&st.editing.k=="del"?st.editing.i:null;
+  const ok=await write(db=>id?db.collection("deliveries").doc(id).set(doc):db.collection("deliveries").add(doc),"#delStatus","Delivery saved.");
+  e.target.disabled=false;if(ok)resetForms();});
+$("#dipCancel").addEventListener("click",resetForms);$("#delCancel").addEventListener("click",resetForms);
+
+$("#list").addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)return;const k=b.dataset.k,i=b.dataset.i;
+  if(b.dataset.a=="edit"){resetForms();st.editing={k,i};
+    if(k=="dip"){const d=st.dips.find(x=>x.id==i);if(!d)return;$("#dipCm").value=d.cm;$("#dipWhen").value=toInput(d.t);$("#dipTitle").textContent="Edit dip";$("#dipSave").textContent="Save changes";$("#dipCancel").hidden=false;previewDip();$("#dipPanel").scrollIntoView({behavior:"smooth"});}
+    else{const d=st.dels.find(x=>x.id==i);if(!d)return;$("#delL").value=d.litres;$("#delWhen").value=toInput(d.t);$("#delP").value=d.ppl||"";$("#delSup").value=d.supplier||"";$("#delTitle").textContent="Edit delivery";$("#delSave").textContent="Save changes";$("#delCancel").hidden=false;$("#delTitle").scrollIntoView({behavior:"smooth"});}
+    return;}
+  if(st.armed!==k+i){st.armed=k+i;renderList();setTimeout(()=>{if(st.armed===k+i){st.armed=null;renderList();}},4000);return;}
+  st.armed=null;await write(db=>db.collection(k=="dip"?"dips":"deliveries").doc(i).delete(),"#listStatus","Deleted.");});
+
+$("#calib").addEventListener("click",async e=>{if(e.target.id!="calApply"||!st.an||!st.an.calib)return;const f=st.an.calib.factor,s=settings();
+  const ns={...s,chart:s.chart.map(([c,l])=>[c,Math.round(l*f)])};e.target.disabled=true;
+  if(await write(db=>db.doc("config/settings").set(ns),"#setStatus","Chart corrected.")){st.set=ns;fillSettings();render();}});
+
+$("#setSave").addEventListener("click",async()=>{const n=id=>parseFloat($(id).value);
+  const chart=$("#s_chart").value.split("\n").map(l=>l.split(/[,\s]+/).filter(Boolean).map(Number)).filter(p=>p.length==2&&p.every(isFinite)).sort((a,b)=>a[0]-b[0]);
+  if(chart.length<2||chart.some((p,i)=>i&&p[1]<chart[i-1][1])){say("#setStatus","The chart needs at least two lines, with litres rising as cm rise.",true);return;}
+  const ns={chart,unusable:n("#s_unusable"),leadDays:n("#s_lead"),bufferDays:n("#s_buffer"),minOrder:n("#s_min"),maxFill:n("#s_max"),assumedRate:n("#s_rate")};
+  if(Object.values(ns).some(v=>typeof v=="number"&&(!isFinite(v)||v<0))){say("#setStatus","Check the numbers: none can be blank or negative.",true);return;}
+  if(await write(db=>db.doc("config/settings").set(ns),"#setStatus","Settings saved.")){st.set=ns;render();}});
+$("#setReset").addEventListener("click",()=>{$("#s_chart").value=DEF.chart.map(p=>p.join(", ")).join("\n");say("#setStatus","Default chart restored. Tap Save settings to keep it.");});
+
+$("#copyCsv").addEventListener("click",async()=>{const ch=settings().chart;
+  const rows=[["type","date_time","dip_cm","litres","pence_per_litre","supplier"],...st.dips.map(d=>["dip",fDT(d.t),d.cm,Math.round(cmToL(d.cm,ch)),"",""]),...st.dels.map(d=>["delivery",fDT(d.t),"",d.litres,d.ppl??"",d.supplier||""])];
+  try{await navigator.clipboard.writeText(rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n"));say("#bkStatus","Copied. Paste it into a spreadsheet or a note.");}catch(e){say("#bkStatus","Copying isn't allowed here.",true);}});
+
+/* Backup and restore */
+const fmtBk=()=>{$("#lastBackup").textContent=store.lastBackup?`Last backup: ${fD(store.lastBackup)}`:"No backup saved yet.";};
+$("#backup").addEventListener("click",async()=>{const d=new Date(),p=n=>String(n).padStart(2,"0");
+  const name=`oil-tank-backup-${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}.json`;
+  const file=new File([JSON.stringify({app:"oiltank",v:1,exported:Date.now(),dips:store.dips,dels:store.dels,set:store.set},null,1)],name,{type:"application/json"});
+  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"Oil tank backup"});}
+    else{const a=document.createElement("a");a.href=URL.createObjectURL(file);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);}
+    store.lastBackup=Date.now();persist();fmtBk();checkNudge();say("#bkStatus","Backup saved. Keep it in Files or iCloud Drive.");}
+  catch(e){if(e&&e.name==="AbortError")say("#bkStatus","Backup cancelled.");else say("#bkStatus","Couldn't save the backup on this device.",true);}});
+let pending=null;
+$("#restore").addEventListener("change",async e=>{const f=e.target.files&&e.target.files[0];e.target.value="";if(!f)return;
+  try{const x=JSON.parse(await f.text());const num=v=>typeof v=="number"&&isFinite(v);
+    if(!x||x.app!=="oiltank"||!Array.isArray(x.dips)||!Array.isArray(x.dels))throw 0;
+    const dips=x.dips.filter(d=>d&&num(d.cm)&&num(d.t)).map(d=>({id:String(d.id||uid()),cm:d.cm,t:d.t}));
+    const dels=x.dels.filter(d=>d&&num(d.litres)&&num(d.t)).map(d=>({id:String(d.id||uid()),litres:d.litres,t:d.t,ppl:num(d.ppl)?d.ppl:null,supplier:typeof d.supplier=="string"?d.supplier.slice(0,60):""}));
+    const set=x.set&&Array.isArray(x.set.chart)?x.set:store.set;
+    pending={dips,dels,set};
+    const st2=$("#bkStatus");st2.className="status";st2.textContent=`Backup from ${fD(x.exported||Date.now())}: ${dips.length} dips and ${dels.length} deliveries. This replaces what's on this device. `;
+    const b=document.createElement("button");b.className="small";b.style.background="var(--red)";b.textContent="Replace my data";b.id="doRestore";st2.appendChild(b);}
+  catch(err){pending=null;say("#bkStatus","That file isn't an Oil Tank backup.",true);}});
+$("#bkStatus").addEventListener("click",e=>{if(e.target.id!=="doRestore"||!pending)return;store={...store,...pending};pending=null;commit();fillSettings();resetForms();say("#bkStatus","Restored from backup.");});
+
+function checkNudge(){const b=$("#banner");const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+  const entries=store.dips.length+store.dels.length,old=!store.lastBackup||Date.now()-store.lastBackup>30*DAYMS;
+  if(!standalone){b.className="banner tip";b.style.display="block";b.textContent="To install: tap the Share icon, then Add to Home Screen, and open Oil Tank from the new icon. Readings entered here in the browser are kept separately from the app.";}
+  else if(old&&entries>=6){b.className="banner warn";b.style.display="block";b.textContent="It's been a while since your last backup. Scroll down to Backup and tap Save backup.";}
+  else b.style.display="none";}
+
+sync();resetForms();fillSettings();render();fmtBk();checkNudge();
+if(firstRun){try{persist();}catch(e){}}
+if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
+if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+</script>
+</body>
+</html>
