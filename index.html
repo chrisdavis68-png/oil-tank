@@ -142,6 +142,22 @@ details summary{cursor:pointer;font:600 22px "Barlow Condensed",sans-serif;min-h
     <div class="status" id="bkStatus"></div>
   </div>
 
+  <div class="panel" id="syncPanel">
+    <h2>Sync between devices</h2>
+    <p class="hint" style="margin-top:0">Links this app to your own Google Sheet, so every device you set up shows the same readings.</p>
+    <div class="row" style="margin-top:8px">
+      <label>Web app link from Google<input id="syncUrl" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec"></label>
+      <label style="flex:0 1 200px">Secret word<input id="syncKey" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="dartmoor-…"></label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button id="syncSave">Save and sync</button>
+      <button class="ghost" id="syncNow">Sync now</button>
+      <button class="ghost" id="syncCopy">Copy sync details</button>
+    </div>
+    <p class="hint"><a id="sheetLink" hidden href="#" style="color:var(--green2)">Open the Google Sheet</a></p>
+    <div class="status" id="syncStatus"></div>
+  </div>
+
   <div class="panel">
     <details>
       <summary>Settings and dip chart</summary>
@@ -286,18 +302,51 @@ const SEED={dips:[{id:"p-2026-11-25",cm:64,t:1795618800000}],dels:[{id:"d-2026-1
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 function loadStore(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&Array.isArray(x.dips)&&Array.isArray(x.dels))return x;}catch(e){}return null;}
 let store=loadStore();const firstRun=!store;if(!store)store=JSON.parse(JSON.stringify(SEED));
+store.tombs=store.tombs||[];store.sync=store.sync||{url:"",key:"",last:null};store.setUpdated=store.setUpdated||0;
 function persist(){localStorage.setItem(KEY,JSON.stringify(store));}
 function sync(){st.dips=store.dips.slice();st.dels=store.dels.slice();st.set={...DEF,...store.set};st.got.d=1;}
-function commit(){persist();sync();render();}
+let changeSeq=0;
+function commit(){persist();sync();render();changeSeq++;scheduleSync(1500);}
 function lastSupplier(){const d=[...(store.dels||[])].sort((a,b)=>b.t-a.t).find(x=>x.supplier);return d?d.supplier:"Watson Fuels";}
 const local={
   collection(name){const k=name=="dips"?"dips":"dels";return{
-    add:async d=>{store[k].push({id:uid(),...d});commit();},
-    doc:id=>({set:async d=>{const a=store[k],i=a.findIndex(x=>x.id==id),v={id,...d};if(i<0)a.push(v);else a[i]=v;commit();},
-             delete:async()=>{store[k]=store[k].filter(x=>x.id!=id);commit();}})};},
-  doc(){return{set:async d=>{store.set=d;commit();}};}
+    add:async d=>{store[k].push({id:uid(),...d,updatedAt:Date.now()});commit();},
+    doc:id=>({set:async d=>{const a=store[k],i=a.findIndex(x=>x.id==id),v={id,...d,updatedAt:Date.now()};if(i<0)a.push(v);else a[i]=v;commit();},
+             delete:async()=>{store[k]=store[k].filter(x=>x.id!=id);store.tombs.push({id,kind:k,updatedAt:Date.now()});commit();}})};},
+  doc(){return{set:async d=>{store.set=d;store.setUpdated=Date.now();commit();}};}
 };
 st.db=local;
+
+/* Sync with the Google Sheet: send everything, get back the merged set (newest edit of each entry wins). */
+function mergeList(a,b){const m=new Map();[...a,...b].forEach(x=>{if(!x||!x.id)return;const o=m.get(x.id);if(!o||(x.updatedAt||0)>(o.updatedAt||0))m.set(x.id,x);});return[...m.values()];}
+function mergeAll(a,b){const tombs=mergeList(a.tombs||[],b.tombs||[]),dead=new Map(tombs.map(t=>[t.id,t.updatedAt]));
+  const alive=x=>!dead.has(x.id)||dead.get(x.id)<(x.updatedAt||0),byT=(p,q)=>p.t-q.t,newer=(b.setUpdated||0)>(a.setUpdated||0);
+  return{dips:mergeList(a.dips,b.dips).filter(alive).sort(byT),dels:mergeList(a.dels,b.dels).filter(alive).sort(byT),tombs,set:newer?b.set:a.set,setUpdated:newer?b.setUpdated:a.setUpdated};}
+let syncTimer=null,syncing=false;
+function scheduleSync(ms){if(!store.sync.url)return;clearTimeout(syncTimer);syncTimer=setTimeout(cloudSync,ms);}
+function syncSay(msg,err){const e=$("#syncStatus");if(e){e.textContent=msg;e.className="status"+(err?" err":"");}}
+async function cloudSync(){
+  const{url,key}=store.sync;if(!url||!key){syncSay("Not set up yet.");return;}
+  if(syncing){scheduleSync(2000);return;}syncing=true;const sent=changeSeq;syncSay("Syncing…");
+  const ch=st.set.chart;
+  const data={dips:store.dips.map(d=>({id:d.id,t:d.t,cm:d.cm,litres:Math.round(cmToL(d.cm,ch)),updatedAt:d.updatedAt||0})),
+    dels:store.dels.map(d=>({id:d.id,t:d.t,litres:d.litres,ppl:d.ppl??null,supplier:d.supplier||"",updatedAt:d.updatedAt||0})),
+    tombs:store.tombs,set:store.set,setUpdated:store.setUpdated||0};
+  try{const r=await fetch(url,{method:"POST",body:JSON.stringify({key,data}),redirect:"follow"});const j=await r.json();
+    if(!j.ok){syncSay(j.error==="wrong_secret"?"The secret word doesn't match the one in the script.":"The sheet couldn't save that. Try Sync now.",true);return;}
+    const m=mergeAll({dips:store.dips,dels:store.dels,tombs:store.tombs,set:store.set,setUpdated:store.setUpdated},j.data);
+    const strip=x=>{const{litres,...rest}=x;return rest;};
+    store.dips=m.dips.map(d=>({id:d.id,t:d.t,cm:d.cm,updatedAt:d.updatedAt||0}));store.dels=m.dels;store.tombs=m.tombs;
+    if(m.set&&Array.isArray(m.set.chart)){store.set=m.set;store.setUpdated=m.setUpdated;}
+    store.sync.last=Date.now();store.sync.sheetUrl=typeof j.sheetUrl=="string"&&j.sheetUrl.startsWith("https://")?j.sheetUrl:"";
+    persist();sync();render();fillSettings();showSync();
+    syncSay(`Synced at ${new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}.`);
+    if(changeSeq!==sent)scheduleSync(1000);}
+  catch(e){syncSay("Couldn't reach the sheet (no signal?). Your entries are safe here and will sync later.",true);}
+  finally{syncing=false;}}
+function showSync(){const s=store.sync;if(!$("#syncUrl"))return;
+  if(document.activeElement!==$("#syncUrl"))$("#syncUrl").value=s.url||"";if(document.activeElement!==$("#syncKey"))$("#syncKey").value=s.key||"";
+  const a=$("#sheetLink");if(s.sheetUrl){a.href=s.sheetUrl;a.hidden=false;}else a.hidden=true;}
 async function write(fn,statusId,okMsg){try{await fn(st.db);say(statusId,okMsg);return true;}catch(e){say(statusId,"Couldn't save on this device. If you're in a private browsing tab, switch to a normal one.",true);return false;}}
 
 $("#dipCm").addEventListener("input",previewDip);
@@ -359,7 +408,7 @@ $("#restore").addEventListener("change",async e=>{const f=e.target.files&&e.targ
     const st2=$("#bkStatus");st2.className="status";st2.textContent=`Backup from ${fD(x.exported||Date.now())}: ${dips.length} dips and ${dels.length} deliveries. This replaces what's on this device. `;
     const b=document.createElement("button");b.className="small";b.style.background="var(--red)";b.textContent="Replace my data";b.id="doRestore";st2.appendChild(b);}
   catch(err){pending=null;say("#bkStatus","That file isn't an Oil Tank backup.",true);}});
-$("#bkStatus").addEventListener("click",e=>{if(e.target.id!=="doRestore"||!pending)return;store={...store,...pending};pending=null;commit();fillSettings();resetForms();say("#bkStatus","Restored from backup.");});
+$("#bkStatus").addEventListener("click",e=>{if(e.target.id!=="doRestore"||!pending)return;const now=Date.now();store={...store,dips:pending.dips.map(d=>({...d,updatedAt:d.updatedAt||now})),dels:pending.dels.map(d=>({...d,updatedAt:d.updatedAt||now})),set:pending.set,setUpdated:now};pending=null;commit();fillSettings();resetForms();say("#bkStatus","Restored from backup.");});
 
 function checkNudge(){const b=$("#banner");const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
   const entries=store.dips.length+store.dels.length,old=!store.lastBackup||Date.now()-store.lastBackup>30*DAYMS;
@@ -367,7 +416,18 @@ function checkNudge(){const b=$("#banner");const standalone=matchMedia("(display
   else if(old&&entries>=6){b.className="banner warn";b.style.display="block";b.textContent="It's been a while since your last backup. Scroll down to Backup and tap Save backup.";}
   else b.style.display="none";}
 
-sync();resetForms();fillSettings();render();fmtBk();checkNudge();
+$("#syncSave").addEventListener("click",()=>{let url=$("#syncUrl").value.trim(),key=$("#syncKey").value.trim();
+  const hashAt=url.indexOf("#k=");if(hashAt>0){key=key||decodeURIComponent(url.slice(hashAt+3));url=url.slice(0,hashAt);}
+  if(!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)){syncSay("Paste the Web app link Google gave you. It starts https://script.google.com/",true);return;}
+  if(!key){syncSay("Enter the secret word.",true);return;}
+  store.sync={...store.sync,url,key};persist();showSync();cloudSync();});
+$("#syncNow").addEventListener("click",()=>cloudSync());
+$("#syncCopy").addEventListener("click",async()=>{const s=store.sync;if(!s.url){syncSay("Set up sync first.",true);return;}
+  try{await navigator.clipboard.writeText(s.url+"#k="+encodeURIComponent(s.key));syncSay("Copied. On your other device, paste it into the Web app link box and tap Save and sync.");}catch(e){syncSay("Copying isn't allowed here.",true);}});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")scheduleSync(300);});
+window.addEventListener("online",()=>scheduleSync(500));
+
+sync();resetForms();fillSettings();render();fmtBk();checkNudge();showSync();scheduleSync(300);
 if(firstRun){try{persist();}catch(e){}}
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});

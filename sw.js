@@ -1,5 +1,5 @@
 // Offline cache for the Oil Tank app. Bump VERSION when files change.
-const VERSION = "oiltank-v1";
+const VERSION = "oiltank-v2";
 const SHELL = ["./", "./index.html", "./manifest.json", "./icon-180.png", "./icon-192.png", "./icon-512.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
